@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.env
+storage/uploads/*
+storage/clips/*
+storage/temp/*
+storage/jobs/*
+!storage/**/.gitkeep
+node_modules/
+.DS_Store

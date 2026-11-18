@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArgonClip — AI Vertical Video Clipping SaaS</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <div class="brand">
+        <span class="brand-badge">9:16</span>
+        <div>
+          <h1>ArgonClip</h1>
+          <p class="subtitle">Long-Form Video → Gemini Analysis → Word Timestamps → 9:16 FFmpeg MP4</p>
+        </div>
+      </div>
+      <div class="health-strip" id="healthStrip">
+        <span class="pill" id="pillFfmpeg">FFmpeg: checking...</span>
+        <span class="pill" id="pillGemini">Gemini Key: checking...</span>
+        <span class="pill" id="pillModel">Model: gemini-2.5-flash</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-grid">
+    <!-- Left Column: API Key Configuration + Video Input -->
+    <section class="left-col">
+      <!-- 1. Server-Side Gemini API Key Configuration -->
+      <div class="card">
+        <div class="card-header">
+          <h2>1. Gemini Free-Tier Configuration</h2>
+          <span class="badge-free">ONLY FREE MODELS</span>
+        </div>
+        <p class="help-text">
+          Your API key is sent directly to the backend and stored only in server memory/env.
+        </p>
+        <div class="form-group">
+          <label for="apiKeyInput">Gemini API Key (Google AI Studio)</label>
+          <input type="password" id="apiKeyInput" placeholder="AIzaSy... (leave blank if already set in .env)" autocomplete="off" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="freeModelSelect">Free-Tier Gemini Model</label>
+            <select id="freeModelSelect">
+              <option value="gemini-2.5-flash">gemini-2.5-flash (Default Free)</option>
+              <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (Fast Free)</option>
+              <option value="gemini-2.0-flash">gemini-2.0-flash (Fallback Free)</option>
+              <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite (Lite Free)</option>
+            </select>
+          </div>
+          <div class="btn-group-inline">
+            <button type="button" class="btn btn-secondary" id="saveKeyBtn">Save Key to Backend</button>
+            <button type="button" class="btn btn-outline" id="testKeyBtn">Test Connection</button>
+          </div>
+        </div>
+        <div id="configFeedback" class="feedback-box hidden"></div>
+      </div>
+
+      <!-- 2. Video Input (Direct Upload or YouTube URL) -->
+      <div class="card">
+        <div class="card-header">
+          <h2>2. Video Input</h2>
+          <div class="tab-switch">
+            <button type="button" class="tab-btn active" id="tabUploadBtn">Direct File Upload</button>
+            <button type="button" class="tab-btn" id="tabYoutubeBtn">YouTube URL</button>
+          </div>
+        </div>
+
+        <!-- Upload Form -->
+        <form id="uploadForm" class="input-panel">
+          <div class="form-group">
+            <label for="videoFileInput">Select Video File (.mp4, .mov, .mkv, .webm, .avi)</label>
+            <input type="file" id="videoFileInput" accept=".mp4,.mov,.mkv,.webm,.avi,.m4v,video/*" required />
+          </div>
+          <div class="form-group">
+            <label for="subtitleFileInput">Optional Subtitle Track (.srt or .vtt) for Instant Word Alignment</label>
+            <input type="file" id="subtitleFileInput" accept=".srt,.vtt" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="uploadLangSelect">Spoken Language</label>
+              <select id="uploadLangSelect">
+                <option value="auto">Auto-Detect (Hindi / English / Hinglish)</option>
+                <option value="hinglish">Hinglish (Mixed Hindi + English)</option>
+                <option value="hi">Hindi (हिन्दी)</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+            <div class="form-group checkbox-group">
+              <label>
+                <input type="checkbox" id="uploadAutoRender" checked />
+                Auto-render top 2 clips immediately
+              </label>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="uploadSubmitBtn">
+            Start Upload &amp; AI Analysis Pipeline
+          </button>
+        </form>
+
+        <!-- YouTube Form -->
+        <form id="youtubeForm" class="input-panel hidden">
+          <div class="form-group">
+            <label for="youtubeUrlInput">YouTube Video or Shorts URL</label>
+            <input type="url" id="youtubeUrlInput" placeholder="https://www.youtube.com/watch?v=..." />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="ytLangSelect">Spoken Language</label>
+              <select id="ytLangSelect">
+                <option value="auto">Auto-Detect (Hindi / English / Hinglish)</option>
+                <option value="hinglish">Hinglish (Mixed Hindi + English)</option>
+                <option value="hi">Hindi (हिन्दी)</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+            <div class="form-group checkbox-group">
+              <label>
+                <input type="checkbox" id="ytAutoRender" checked />
+                Auto-render top 2 clips immediately
+              </label>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="ytSubmitBtn">
+            Extract YouTube Video &amp; Run Pipeline
+          </button>
+        </form>
+
+        <div id="ingestFeedback" class="feedback-box hidden"></div>
+      </div>
+
+      <!-- Recent Jobs List -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Recent Processing Jobs</h2>
+          <button type="button" class="btn btn-sm btn-outline" id="refreshJobsBtn">Refresh</button>
+        </div>
+        <div id="jobsListContainer" class="jobs-list">
+          <p class="muted">No jobs submitted yet.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Active Pipeline Progress, Best Moments, Transcript, & 9:16 Downloads -->
+    <section class="right-col">
+      <!-- 3. Active Job Pipeline Status -->
+      <div class="card" id="activeJobCard">
+        <div class="card-header">
+          <h2>3. Pipeline Status &amp; Video Metadata</h2>
+          <span class="status-badge" id="jobStatusBadge">Idle</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar" id="jobProgressBar" style="width: 0%"></div>
+        </div>
+        <p class="step-text" id="jobStepText">Upload a video or paste a YouTube URL to begin processing.</p>
+        <div id="jobErrorBox" class="feedback-box error hidden"></div>
+
+        <div id="videoMetaBox" class="meta-grid hidden"></div>
+
+        <details class="logs-drawer">
+          <summary>Execution Logs</summary>
+          <pre id="jobLogsPre">No active job logs.</pre>
+        </details>
+      </div>
+
+      <!-- 4. Best Moment Detection & FFmpeg Clip Selector -->
+      <div class="card" id="momentsCard">
+        <div class="card-header">
+          <h2>4. Detected Best Moments &amp; Clip Framing Controls</h2>
+          <button type="button" class="btn btn-sm btn-outline" id="addCustomMomentBtn" disabled>+ Add Custom Time Range</button>
+        </div>
+        <p class="help-text">
+          Select suggested moments or fine-tune start/end timestamps (clamped to actual source video duration).
+        </p>
+
+        <div class="render-options-bar">
+          <div class="form-group">
+            <label for="targetResSelect">Output 9:16 Resolution</label>
+            <select id="targetResSelect">
+              <option value="1080x1920">1080x1920 (Full HD Vertical 9:16)</option>
+              <option value="720x1280">720x1280 (Fast HD Vertical 9:16)</option>
+            </select>
+          </div>
+          <label class="checkbox-inline">
+            <input type="checkbox" id="optSubjectTracking" checked />
+            OpenCV Subject-Aware Framing
+          </label>
+          <label class="checkbox-inline">
+            <input type="checkbox" id="optBurnCaptions" checked />
+            Burn Animated Word Captions (White / Yellow)
+          </label>
+        </div>
+
+        <div id="momentsListContainer" class="moments-list">
+          <p class="muted">Moments will appear here after transcription and Gemini analysis complete.</p>
+        </div>
+
+        <button type="button" class="btn btn-primary btn-block" id="renderSelectedBtn" disabled>
+          Generate Selected 9:16 Vertical Clips with FFmpeg
+        </button>
+      </div>
+
+      <!-- 5. Exported 9:16 Vertical Clips & MP4 Downloads -->
+      <div class="card" id="clipsCard">
+        <div class="card-header">
+          <h2>5. Generated 9:16 Vertical MP4 Clips &amp; Downloads</h2>
+          <span class="pill" id="clipCountBadge">0 clips</span>
+        </div>
+        <div id="clipsGalleryContainer" class="clips-gallery">
+          <p class="muted">Rendered 9:16 vertical MP4 clips will appear here with preview player and direct download links.</p>
+        </div>
+      </div>
+
+      <!-- 6. Timestamped Transcript & Word-Level Alignment -->
+      <div class="card" id="transcriptCard">
+        <div class="card-header">
+          <h2>6. Word-Level Timestamped Transcript (Hindi / English / Hinglish)</h2>
+          <span class="pill" id="transcriptLangBadge">Language: -</span>
+        </div>
+        <div id="transcriptContainer" class="transcript-box">
+          <p class="muted">Full transcript and word-level timing markers will appear here.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>
